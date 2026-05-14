@@ -16,9 +16,9 @@
 
 | File | Purpose |
 |------|---------|
-| `context.md` | Background on the topic and audience perspective |
-| `objectives.md` | What we want to achieve and how to measure it |
-| `talking-points.md` | Key messages to land |
-| `questions.md` | Discovery questions to ask |
-| `resources.md` | Links, docs, and demos to reference |
-| `notes.md` | Post-conversation capture (fill in after) |
+| [context.md](context.md) | Background on the topic and audience perspective |
+| [objectives.md](objectives.md) | What we want to achieve and how to measure it |
+| [talking-points.md](talking-points.md) | Key messages to land |
+| [questions.md](questions.md) | Discovery questions to ask |
+| [resources.md](resources.md) | Links, docs, and demos to reference |
+| [notes.md](notes.md) | Post-conversation capture (fill in after) |
