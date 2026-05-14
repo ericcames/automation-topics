@@ -16,9 +16,9 @@ Leave the conversation with a clear understanding of where they are today and a 
 
 | File | Purpose |
 |------|---------|
-| `context.md` | SSE audience profile and AAP 2.6 CI/CD background |
-| `objectives.md` | What we want to achieve and learn |
-| `talking-points.md` | Key messages for this audience |
-| `questions.md` | Discovery and qualification questions |
-| `resources.md` | Docs, demos, and references |
-| `notes.md` | Post-conversation capture (fill in after) |
+| [context.md](context.md) | SSE audience profile and AAP 2.6 CI/CD background |
+| [objectives.md](objectives.md) | What we want to achieve and learn |
+| [talking-points.md](talking-points.md) | Key messages for this audience |
+| [questions.md](questions.md) | Discovery and qualification questions |
+| [resources.md](resources.md) | Docs, demos, and references |
+| [notes.md](notes.md) | Post-conversation capture (fill in after) |
