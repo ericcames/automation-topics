@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- [AGENTS.md](AGENTS.md) for AI contributor orientation
+- Cursor project rule [`.cursor/rules/read-agents.mdc`](.cursor/rules/read-agents.mdc) (`alwaysApply`) so agents load that guidance automatically
+
 ## [1.1.0] - 2026-05-14
 
 ### Changed

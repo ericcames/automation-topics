@@ -1,0 +1,10 @@
+---
+description: Read AGENTS.md before editing sessions or contributing
+alwaysApply: true
+---
+
+# AI contributors
+
+Before adding or changing anything under `sessions/` or `_template/`, updating the session index in the root `README.md`, or editing `CONTRIBUTING.md` / `AGENTS.md`, read `AGENTS.md` at the repository root. It states the content policy, session folder naming, required files per session, and what to update alongside a new session.
+
+If guidance differs between `AGENTS.md` and `CONTRIBUTING.md`, treat `CONTRIBUTING.md` as authoritative.

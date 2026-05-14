@@ -39,6 +39,8 @@ Sessions are identified by audience type and topic only. If something was said i
 
 ## AI Agent Workflow
 
+For a short, agent-oriented checklist (naming, files, content policy), see [AGENTS.md](AGENTS.md).
+
 Sessions are designed for multi-agent collaboration. Each file in a session folder is atomic — Claude, Cursor, or any other agent can work on separate files without conflict. When an agent contributes, note it in the session `README.md` under **Contributors**.
 
 ## Pull Requests
