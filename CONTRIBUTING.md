@@ -26,6 +26,8 @@ Sessions are identified by audience type and topic only. If something was said i
 
 4. Add an entry under `[Unreleased]` in `CHANGELOG.md`.
 
+CI on pull requests checks folder naming, required session files, and that the README Session Index links every `sessions/` folder to a real directory (see `.github/workflows/ci.yml`).
+
 ### Audience Type Labels
 
 | Label | Audience |

@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - [AGENTS.md](AGENTS.md) for AI contributor orientation
 - Cursor project rule [`.cursor/rules/read-agents.mdc`](.cursor/rules/read-agents.mdc) (`alwaysApply`) so agents load that guidance automatically
 
+### Changed
+- CI validates session folder naming, requires each session folder in the README Session Index, and checks that index links point at existing directories
+- CONTRIBUTING and AGENTS.md note the session-related CI checks
+
 ## [1.1.0] - 2026-05-14
 
 ### Changed

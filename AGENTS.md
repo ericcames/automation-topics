@@ -27,6 +27,8 @@ If content came from a specific meeting or private context, it does **not** belo
 
 - After adding a session: update the **Session index** table in the root [README.md](README.md) and add a line under `[Unreleased]` in [CHANGELOG.md](CHANGELOG.md).
 
+- **CI** (`.github/workflows/ci.yml`) enforces session folder naming, the required file set, and that the Session Index links every folder under `sessions/` and does not point at missing paths.
+
 ## How to work without stepping on other agents
 
 Each file in a session is meant to be edited independently. Prefer **one file per change** when collaborating in parallel. If you touch the session `README.md`, add yourself under **Contributors** (tool or model name is enough).

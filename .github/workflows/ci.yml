@@ -30,3 +30,38 @@ jobs:
               test -f "${session}${f}" || { echo "Missing ${session}${f}"; exit 1; }
             done
           done
+
+      - name: Validate session folder names and README session index
+        run: |
+          set -euo pipefail
+          if ! grep -q '^## Session Index$' README.md; then
+            echo 'README.md must contain a section heading exactly: ## Session Index'
+            exit 1
+          fi
+          SESSION_PATTERN='^[0-9]{4}-[0-9]{2}-[0-9]{2}_(customer-sse|customer-architect|customer-exec|sales-ae|sales-se|internal)_[a-z0-9]+(-[a-z0-9]+)*$'
+          for session in sessions/*/; do
+            [ -d "$session" ] || continue
+            base="${session%/}"
+            base="${base#sessions/}"
+            if ! [[ "$base" =~ $SESSION_PATTERN ]]; then
+              echo "Invalid session folder name: ${base}"
+              echo "Expected: YYYY-MM-DD_<audience-type>_<topic-slug>"
+              echo "Audience must be one of: customer-sse, customer-architect, customer-exec, sales-ae, sales-se, internal."
+              echo "Topic slug: lowercase letters, digits, and hyphens (no leading hyphen)."
+              exit 1
+            fi
+            if ! grep -Fq "(sessions/${base}/)" README.md; then
+              echo "README.md Session Index must include a markdown link with target (sessions/${base}/)."
+              exit 1
+            fi
+          done
+          INDEX_BLOCK="$(awk '/^## Session Index$/{f=1;next} f && /^## /{exit} f' README.md)"
+          mapfile -t LINKS < <(printf '%s\n' "$INDEX_BLOCK" | grep -oE '\(sessions/[^)]+\)' || true)
+          for paren in "${LINKS[@]}"; do
+            path="${paren#\(}"
+            path="${path%\)}"
+            if [[ ! -d "$path" ]]; then
+              echo "README Session Index links to a path that is not a directory: ${path}"
+              exit 1
+            fi
+          done
