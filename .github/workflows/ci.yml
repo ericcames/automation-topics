@@ -1,0 +1,32 @@
+---
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  sanity:
+    name: Repository sanity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify required root files exist
+        run: |
+          test -f README.md
+          test -f LICENSE
+          test -f CHANGELOG.md
+          test -f CONTRIBUTING.md
+          test -f CODE_OF_CONDUCT.md
+
+      - name: Verify session folders contain required files
+        run: |
+          for session in sessions/*/; do
+            [ -d "$session" ] || continue
+            for f in README.md context.md objectives.md talking-points.md questions.md resources.md notes.md; do
+              test -f "${session}${f}" || { echo "Missing ${session}${f}"; exit 1; }
+            done
+          done
