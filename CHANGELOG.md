@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-05-14
+
+### Changed
+- Linked file names in session README and `_template/README.md` to actual files so they are clickable on GitHub
+
 ## [1.0.0] - 2026-05-14
 
 ### Added
