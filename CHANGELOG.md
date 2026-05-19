@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - [AGENTS.md](AGENTS.md) for AI contributor orientation
 - Cursor project rule [`.cursor/rules/read-agents.mdc`](.cursor/rules/read-agents.mdc) (`alwaysApply`) so agents load that guidance automatically
 - Session [2026-05-19_internal_dynatrace-aap26-workflow-connectivity](sessions/2026-05-19_internal_dynatrace-aap26-workflow-connectivity/) — Dynatrace Workflows to AAP 2.6 EDA event stream: Option 1 static Event data (validated), Option 2 JavaScript `fetch` deferred, UI pitfalls documented
+- Same session: EdgeConnect (SaaS → on-prem OpenShift), DNS/connect `os error 16` troubleshooting
+- Same session: [cribnotes.md](sessions/2026-05-19_internal_dynatrace-aap26-workflow-connectivity/cribnotes.md) from personal Dynatrace crib sheet (redacted)
 
 ### Changed
 - CI validates session folder naming, requires each session folder in the README Session Index, and checks that index links point at existing directories
