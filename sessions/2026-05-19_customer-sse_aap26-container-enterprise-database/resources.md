@@ -86,3 +86,34 @@ Public Red Hat testing/validation repo (not a substitute for official AAP instal
 - **Cons:** **EnterpriseDB subscription** required (extra cost vs RHEL PostgreSQL); repo targets **RHEL 9.4+** / **OpenShift 4.12+** — validate **RHEL 10** + **containerized enterprise on VMs** against this repo (may differ from repo's Operator/TPA-first layouts); **split support** (EDB + Red Hat AAP).
 - **Cost:** Typically **higher** than RH-aligned community PostgreSQL on RHEL because of **EDB licensing** plus HA/DR scope (S3 WAL archive, multi-DC).
 - **Do not** treat EDB_Testing as replacing the [container enterprise topology](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/plan-ref_cont_b_env_a) or the [external PostgreSQL install guide](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/install-con_configuring-an-external-postgresql-database) until architecture is mapped explicitly to the customer's RHEL 10 + containerized enterprise topology.
+
+## Concepts — quick reference
+
+Background for the technical terms used across [talking-points.md](talking-points.md), particularly Appendix A (HA) and Appendix C (sizing / pooling).
+
+### Patroni + etcd / Consul (PostgreSQL HA)
+
+- **Patroni** is an open-source HA orchestrator for PostgreSQL. A Patroni daemon runs alongside each PG node, monitors health, and automates failover — promote a standby when the primary dies, demote the old primary when it returns, run `pg_rewind` if needed.
+- PostgreSQL has streaming replication built in, but **no automatic failover** — promotion is `pg_ctl promote` until something orchestrates it. Patroni is that orchestrator.
+- **etcd or Consul** is a distributed key-value store (typically 3 or 5 nodes for quorum) that Patroni uses as its **consensus layer**. Patroni instances ask etcd "who currently holds the leader lock?" to prevent split-brain (two primaries both accepting writes → corruption). etcd holds a short leader lease; whichever node can renew it is primary.
+- **Why use it:** if RPO ≈ 0 and RTO < ~5 min are real requirements, manual failover does not meet them. Patroni + etcd is the most common community pattern for sub-minute automatic failover on RHEL VMs without a vendor product.
+- **Operational cost:** three layers to operate instead of one — Postgres, the Patroni daemon on each PG node, and the etcd cluster (which itself wants 3 or 5 nodes for quorum).
+- **Alternatives:**
+  - **RH HA Add-on (Pacemaker + Corosync)** — OS-level cluster manager with a Postgres resource agent. RHEL-native; less Postgres-specific tooling than Patroni; requires fencing.
+  - **DBaaS (RDS / Azure DB)** — hides all of this behind a managed multi-AZ flip.
+  - **Crunchy PGO** — bakes HA into the Kubernetes operator.
+  - **EDB EFM** — EnterpriseDB's failover manager; what the EDB_Testing repo uses.
+
+### PgBouncer (PostgreSQL connection pooler)
+
+- **PgBouncer** is a lightweight connection pooler that sits between clients (AAP components) and Postgres. Clients connect to PgBouncer; PgBouncer maintains a small pool of real connections to Postgres and multiplexes client traffic onto them.
+- **Why use it:** each PostgreSQL backend connection costs ~10 MB of RAM and has setup overhead. AAP enterprise has gateway + controller + hub + EDA, each with multiple workers — easily hundreds of would-be connections at peak. PgBouncer lets you serve 500 client "connections" through, say, 50 real Postgres backends.
+- **Three pooling modes:**
+  - **Session pooling** — client gets a real backend for the life of its connection. Safest; smallest gain.
+  - **Transaction pooling** — client borrows a backend per transaction. Big efficiency gain, but **breaks** prepared statements, session-level GUCs (`SET`), and `LISTEN` / `NOTIFY`.
+  - **Statement pooling** — per-statement. Rarely usable.
+- **The AAP gotcha:** EDA uses `LISTEN` / `NOTIFY` heavily, and some controller code paths rely on session state. **Transaction pooling can break those.** AAP 2.6 does not ship an opinionated pooler for external DB — you cannot drop in PgBouncer in transaction mode and walk away.
+- **Decisions to make:**
+  - **Placement** — PgBouncer per AAP component host (each AAP node has its own bouncer) or centralized (one bouncer host between clients and DB).
+  - **Mode** — start with **session pooling** for AAP safety; only move to transaction pooling after testing each component end-to-end.
+  - **Or skip pooling** and size Postgres `max_connections` higher (simpler, less efficient).

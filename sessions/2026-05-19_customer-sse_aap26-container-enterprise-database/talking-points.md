@@ -213,6 +213,27 @@ Three customer-operated paths are compared below. **EDB** is not carried as a co
 | EnterpriseDB subscription already in place or compliance requires it | **EDB path** — see [resources.md → EDB](resources.md#red-hat-enterprisedb-testing-with-aap-not-referenced-before-2026-05-19) for pros/cons, repo scope, and support boundary | Validate **RHEL 10** + **containerized enterprise on VMs** against repo's tested configurations; support is split (Red Hat AAP + EDB) |
 | Future move of AAP to **Operator on OCP** | Revisit DB path when platform shifts; not a driver for the current RHEL 10 VM decision | Do not pre-buy Crunchy now in anticipation |
 
+### Discovery flow (visual)
+
+Walk the customer through these three questions before opening the side-by-side. Concepts referenced (Patroni, PgBouncer, etc.) are explained in [resources.md → Concepts](resources.md#concepts--quick-reference).
+
+```mermaid
+flowchart TD
+    Start([Discovery start]) --> Pre{Crunchy or EDB<br/>already at scale<br/>or mandated?}
+    Pre -->|Crunchy at scale| Crunchy[<b>Crunchy PGO</b><br/>leverage sunk cost<br/>document support RACI]
+    Pre -->|EDB mandated| EDB[<b>EDB path</b><br/>see resources.md → EDB]
+    Pre -->|No| Q1{Tight RPO/RTO?<br/>RPO ≈ 0 / RTO &lt; 5 min}
+
+    Q1 -->|Yes - tight| Q2{Managed DBaaS<br/>allowed?<br/>RDS / Azure DB}
+    Q1 -->|No - overnight OK| Q3{postgresql_admin_*<br/>superuser available?}
+
+    Q2 -->|Yes| DBaaS[<b>Managed DBaaS</b><br/>cloud-native multi-AZ HA<br/>pre-create DBs/users<br/>cloud-managed backup]
+    Q2 -->|No| HARHEL[<b>RH-aligned PG on RHEL 10 VM</b><br/>+ named HA pattern<br/>Patroni+etcd or RH HA Add-on<br/>HA design committed before install]
+
+    Q3 -->|Yes| RHELadmin[<b>RH-aligned PG on RHEL 10 VM</b><br/>installer-driven object creation<br/>via postgresql_admin_*]
+    Q3 -->|No - DBA-blocked| RHELprecreate[<b>RH-aligned PG on RHEL 10 VM</b><br/>DBA pre-creates DBs/users<br/>pre-create SQL runbook required]
+```
+
 ### What this section deliberately does NOT recommend
 
 Until the three discovery answers are in, this brief does **not** recommend:
@@ -243,14 +264,16 @@ The "RH-aligned external PG on RHEL VM" recommendation is **not complete** until
 | **RH HA Add-on (Pacemaker + Corosync)** | RHEL-native cluster manager with PG resource agent | Customer already standardizes on Pacemaker for other RHEL HA | Less Postgres-specific tooling than Patroni; fencing must be configured |
 | **DBaaS-native (multi-AZ)** | Cloud-managed automatic failover | DBaaS path is selected (see [§3](#3-side-by-side-summary-table)) | Out of scope for "RH-aligned on RHEL VM" — this is a separate path |
 
-**To populate during discovery:**
+**To populate during discovery** (SSE proposes; customer confirms or overrides):
 
-- [ ] HA pattern selected: ______________
-- [ ] Replication topology (sync / async, N standbys): ______________
-- [ ] Failover trigger (automated / manual) and **measured** RTO: ______________
-- [ ] Cluster-manager owner (etcd / Pacemaker / cloud): ______________
-- [ ] DR (cross-site) plan — **separate from HA**: ______________
-- [ ] Backup target during failover (primary only? replica-tolerant?): ______________
+| Item | Proposed default (SSE) | Customer answer |
+|------|------------------------|-----------------|
+| HA pattern selected | **Patroni + etcd** (3-node etcd, 2-node PG primary/standby) | |
+| Replication topology | Async streaming, 1 standby in-DC; add cross-DC async for DR | |
+| Failover trigger and **measured** RTO | Automated via Patroni; target RTO < 60 s | |
+| Cluster-manager owner | Linux/DBA team operates etcd + Patroni | |
+| DR (cross-site) plan — **separate from HA** | Async streaming to DR site + WAL archive to S3-compatible object store | |
+| Backup target during failover | Backups from primary; pgBackRest with replica-tolerant config when possible | |
 
 **Network ports beyond 5432** (add to the AAP firewall plan, since the topology doc covers only 5432):
 
@@ -266,32 +289,47 @@ The "RH-aligned external PG on RHEL VM" recommendation is **not complete** until
 Stubs — fill in owner and verified date during discovery / preparation. Items here block AAP install if missed.
 
 ### Database stack
-- [ ] PostgreSQL version selected (**15 / 16 / 17**, gated on backup-tooling decision): ______________
-- [ ] ICU enabled and version verified compatible with chosen PG major: ______________
-- [ ] Required extensions enabled (confirm full list against AAP 2.6 docs; **hstore** known): ______________
-- [ ] Backup target identified and **restore tested** (where dumps land, retention, encryption): ______________
-- [ ] HA pattern committed and replication tested (see [Appendix A](#appendix-a-ha-pattern-decision-must-commit-before-install)): ______________
+
+| Item | Proposed default (SSE) | Customer answer |
+|------|------------------------|-----------------|
+| PostgreSQL version | **PG 16** — community EOL Nov 2028 (vs PG 15 Nov 2027); pairs with customer-owned backup (pgBackRest) since AAP backup utility targets PG 15 | |
+| ICU enabled and version | Default RHEL Postgres ships ICU; verify against chosen PG major | |
+| Required extensions | **hstore** known; confirm full list against AAP 2.6 install doc before install | |
+| Backup target + **restore tested** | pgBackRest to S3-compatible object store; daily full + 15-min WAL; 30-day retention; quarterly restore drill | |
+| HA pattern committed and replication tested | Patroni + etcd (see [Appendix A](#appendix-a-ha-pattern-decision-must-commit-before-install)) | |
 
 ### Access and credentials
-- [ ] `postgresql_admin_*` superuser available **OR** pre-create SQL runbook ready (gateway, controller, hub, EDA): ______________
-- [ ] Per-component PG users created with their own database + password: ______________
-- [ ] Secrets storage for PG creds (Vault / inventory encrypted with `ansible-vault`): ______________
+
+| Item | Proposed default (SSE) | Customer answer |
+|------|------------------------|-----------------|
+| `postgresql_admin_*` superuser **OR** pre-create runbook | **DBA pre-creates** DBs and users (more enterprise-realistic than handing over PG superuser) | |
+| Per-component PG users | `gateway`, `controller`, `hub`, `eda` each with own DB + password | |
+| Secrets storage for PG creds | `ansible-vault` for install-time secrets; rotate via existing PKI/secrets process | |
 
 ### Network
-- [ ] TCP **5432** from each AAP component class to DB endpoint — firewall rule confirmed end-to-end: ______________
-- [ ] Replication / cluster-manager ports open between PG nodes (see [Appendix A](#appendix-a-ha-pattern-decision-must-commit-before-install)): ______________
-- [ ] DB hostname resolvable from **every** AAP VM (gateway, controller, hub, EDA, mesh): ______________
-- [ ] Latency budget **measured** (AAP VMs → DB endpoint, p99 round-trip): ______________
+
+| Item | Proposed default (SSE) | Customer answer |
+|------|------------------------|-----------------|
+| TCP **5432** from each AAP component class to DB | Confirmed in firewall change request before install | |
+| Replication / cluster-manager ports between PG nodes | Patroni REST 8008 + etcd 2379/2380, restricted to PG/etcd hosts only | |
+| DB hostname resolvable from every AAP VM | DNS A record pointing to Patroni-managed VIP / leader | |
+| Latency budget **measured** | Target p99 < 5 ms intra-DC; document if higher | |
 
 ### TLS
-- [ ] DB server certificate issued by CA trusted by AAP container trust store: ______________
-- [ ] `sslmode` enforced (target: `verify-full`): ______________
-- [ ] Certificate rotation plan documented (who, when, how): ______________
+
+| Item | Proposed default (SSE) | Customer answer |
+|------|------------------------|-----------------|
+| DB server certificate | Issued by internal CA already trusted by AAP container trust store | |
+| `sslmode` enforced | **`verify-full`** | |
+| Certificate rotation plan | Annual rotation aligned with existing PKI rotation | |
 
 ### Day-2
-- [ ] Restore drill scheduled with owner named: ______________
-- [ ] PG major-version upgrade plan documented (especially if PG **15** chosen — EOL Nov 2027): ______________
-- [ ] Monitoring / alerting endpoint (connections, replication lag, disk, slow queries): ______________
+
+| Item | Proposed default (SSE) | Customer answer |
+|------|------------------------|-----------------|
+| Restore drill | Quarterly; DBA team owns; documented evidence kept | |
+| PG major-version upgrade plan | Document at install; re-evaluate PG 16 → 17 in 2027 | |
+| Monitoring / alerting | `postgres_exporter` → Prometheus/Grafana; alert on replication lag, connection count, disk, slow queries | |
 
 ---
 
@@ -310,15 +348,15 @@ AAP per-VM minimums (16 GB RAM, 4 vCPU, 60 GB disk, 3000 IOPS) **do not apply** 
 | Concurrent active connections (peak) | ______ | Estimate from controller + gateway + hub + EDA worker counts |
 | Retention windows (job events, audit) | ______ | Customer compliance |
 
-**Stub sizing (replace with measured numbers once inputs collected):**
+**Stub sizing — SSE proposes opinionated defaults; customer validates / overrides:**
 
-| Resource | Stub | Notes |
-|----------|------|-------|
-| vCPU | TBD (≥ 8 typical for enterprise) | Scale with concurrent connections + EDA event rate |
-| RAM | TBD (≥ 32 GB typical) | Target ≥ working set of all four logical DBs |
-| Storage | TBD | Four logical DBs (gateway, controller, hub, EDA) — controller usually dominates with job events |
-| IOPS | TBD (3000 is the per-VM **minimum**, not a DB target) | Provision higher for DB tier; measure under expected EDA + job load |
-| Connections / pooling | TBD | **Decide pooling strategy** (PgBouncer placement? per-component?) before sizing connections — AAP 2.6 does not ship an opinionated pooler for external DB |
-| Network bandwidth (DB ↔ AAP) | TBD | EDA event ingestion can saturate small links |
+| Resource | Proposed default (SSE) | Customer-validated value | Notes |
+|----------|------------------------|--------------------------|-------|
+| vCPU | **8** (scale to 16 at heavy EDA load) | | Scale with concurrent connections + EDA event rate |
+| RAM | **32 GB** (64 GB if hub becomes large) | | Target ≥ working set of all four logical DBs |
+| Storage | **500 GB** fast SSD | | Controller job events dominate; size for chosen retention window |
+| IOPS | **5000 sustained / 10 000 burst** | | 3000 is the per-VM **minimum**; the DB tier needs more. Confirm under expected EDA + job load |
+| Connections / pooling | **PgBouncer in session mode**, deployed per AAP component host; PG `max_connections = 200` | | See [resources.md → Concepts](resources.md#concepts--quick-reference) for why session mode (LISTEN/NOTIFY safety for EDA) |
+| Network bandwidth (DB ↔ AAP) | **1 Gbps minimum** intra-DC | | EDA event ingestion can saturate small links |
 
 **Per-environment scaling:** Test, staging, and prod will each have a DB tier. Decide whether non-prod gets HA, what scale, and whether DBaaS is permitted in all environments before committing.
