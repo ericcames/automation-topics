@@ -39,6 +39,7 @@ Each session folder contains:
 | Date | Audience | Topic | Folder |
 |------|----------|-------|--------|
 | 2026-05-14 | `customer-sse` | AAP 2.6 and CI/CD pipelines | [sessions/2026-05-14_customer-sse_aap26-cicd-pipelines](sessions/2026-05-14_customer-sse_aap26-cicd-pipelines/) |
+| 2026-05-19 | `internal` | Dynatrace → AAP 2.6 EDA event stream (Option 1 static JSON) | [sessions/2026-05-19_internal_dynatrace-aap26-workflow-connectivity](sessions/2026-05-19_internal_dynatrace-aap26-workflow-connectivity/) |
 
 ## Contributing
 
