@@ -28,15 +28,18 @@ Red Hat does **not** sell a separate “AAP database SKU.” The customer is rea
 | **Red Hat supported database** | One of **two** RH-oriented paths: **(A)** **PostgreSQL** per official AAP 2.6 container docs (installer `[database]` or **external** PG **15–17** + ICU on RHEL), or **(B)** **EnterpriseDB Postgres Advanced Server** using Red Hat’s public **[EDB_Testing](https://github.com/Red-Hat-EnterpriseDB-Testing/EDB_Testing)** reference (TPA on RHEL, or OpenShift manifests; **EDB subscription** required). |
 | **Non–Red Hat supported database** | DB platforms **not** covered by AAP external-DB requirements or EDB testing repo: e.g. **Crunchy-only** mandate without EDB/AAP alignment, unsupported PG versions, missing ICU, or bespoke DBaaS the team will not certify. |
 
-### Third path — EnterpriseDB (Red Hat tested, vendor-licensed)
+### If the customer raises EnterpriseDB
 
-If the customer says “Red Hat supported” but means **EnterpriseDB**, point them to [Red-Hat-EnterpriseDB-Testing/EDB_Testing](https://github.com/Red-Hat-EnterpriseDB-Testing/EDB_Testing):
+EDB is a real path but **only if the customer already has an EDB subscription or compliance requires it**. The customer in this session has not raised it, so it is **not** carried as a column in the side-by-side. If it comes up, route to [resources.md → Red Hat EnterpriseDB testing with AAP](resources.md#red-hat-enterprisedb-testing-with-aap-not-referenced-before-2026-05-19) for the deep-dive (pros/cons, cost, repo scope, support RACI).
 
-- **Pros:** Multi-DC HA/DR patterns, EFM failover hooks, AAP scale scripts during failover, documented RTO/RPO targets, DR test framework.
-- **Cons:** **EnterpriseDB subscription** (extra cost vs RHEL PostgreSQL); repo targets **RHEL 9.4+** / **OpenShift 4.12+** — validate **RHEL 10** + **containerized enterprise on VMs** against this repo (may differ from repo’s Operator/TPA-first layouts); **split support** (EDB + Red Hat AAP).
-- **Cost:** Typically **higher** than RH-aligned community/PostgreSQL on RHEL because of **EDB licensing** and HA/DR scope (S3 WAL archive, multi-DC).
+### Third path — Managed DBaaS (AWS RDS / Azure Database for PostgreSQL)
 
-Do **not** treat EDB_Testing as replacing [container enterprise topology](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/plan-ref_cont_b_env_a) or [external PostgreSQL install guide](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/install-con_configuring-an-external-postgresql-database) until architecture is mapped explicitly.
+If "external Postgres" can be a **cloud-managed service**, this is the lowest-day-2-labor option and often the cleanest support RACI:
+
+- **Pros:** Cloud team owns patching, HA (multi-AZ), backup/restore, minor upgrades. TLS by default, IAM-based access (per SKU), monitoring built in. Red Hat → AAP support; cloud provider → DB.
+- **Cons:** **No `postgresql_admin_*` superuser** — DBs and users **must be pre-created manually** before AAP install. Verify ICU, required extensions (e.g. **hstore**), and PG version against AAP 2.6 requirements **per cloud SKU and parameter group**. **AAP containerized backup utilities may not integrate** with cloud-managed snapshot lifecycles — accept cloud-native backup as the source of truth.
+- **Cost:** Per-vCPU / storage / I/O monthly cost; usually higher than a single RHEL DB VM at low scale, **comparable or lower at enterprise scale** once HA and ops labor are included.
+- **Network:** AAP VMs reach the DB endpoint over VPN / Direct Connect / ExpressRoute (or in-cloud) — latency budget must be measured, not assumed.
 
 **Enterprise topology note:** Red Hat’s [enterprise diagram](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/plan-ref_cont_b_env_a#cont-b-env-a___infrastructure_topology) shows an **externally managed database service** (not Postgres on the controller VMs). That aligns with the **external** configuration path, not necessarily omitting a dedicated DB VM.
 
@@ -79,9 +82,13 @@ Do **not** treat EDB_Testing as replacing [container enterprise topology](https:
 | **People / time** | RH-aligned **PG 15** + installer `postgresql_admin_*` or AAP backup playbooks | Greenfield **Crunchy** adoption, custom backup for PG 16/17, cross-team runbooks |
 | **Risk / downtime cost** | Conforming config → fewer “unsupported” escalations | Misconfiguration → failed install, failed upgrade, or split support |
 
-**Practical answer for SSE:** For this customer (**AAP enterprise on RHEL 10 VMs**), **Red Hat–aligned external PostgreSQL 15 on a RHEL 10 database VM** is usually **lower total cost** than **Crunchy/non-RH**. **Non-RH** costs more when you include Crunchy licensing, OpenShift database platform effort, and split support—unless Crunchy is already a **sunk cost** across the estate.
+**Cost framing for SSE (not a recommendation):** All else equal, **RH-aligned external PostgreSQL on RHEL** tends to carry lower total cost than **Crunchy** or **EDB** in greenfield estates, because the latter add subscription cost and (for Crunchy) an OpenShift database-platform footprint. This **flips** when:
 
-**Exception:** If the organization **already** runs Crunchy at scale, marginal **incremental** cost of one more cluster can be small—but **integration and support RACI** cost remains.
+- The customer **already** runs Crunchy or EDB at scale — incremental cost of one more cluster is small.
+- **Managed DBaaS** (RDS / Azure Database) is on the table — operational labor drops, but `postgresql_admin_*` superuser flow does not work and DBs/users must be pre-created.
+- **HA / RPO / RTO** is tight — the RH-aligned path's apparent simplicity disappears once you cost a real Patroni or RH HA Add-on build.
+
+Final path selection lives in [§7](#7-recommendation-framing--conditional-on-discovery-answers) and depends on discovery, not on this cost generalization.
 
 ---
 
@@ -99,19 +106,24 @@ So the conversation is: **how** you run external Postgres, not whether enterpris
 
 ## 3. Side-by-side (summary table)
 
-| Dimension | Red Hat–aligned external PostgreSQL | Customer external via Crunchy (PGO) |
-|-----------|-------------------------------------|-------------------------------------|
-| **What it is** | PostgreSQL on RHEL (VM or approved host), provisioned per RH external-DB install guide | PostgreSQL clusters managed by Crunchy Data Operator (often on OpenShift) |
-| **PostgreSQL versions (2.6)** | **15** matches “AAP managed database” version line; external allowed **15–17** with ICU | Typically **15–17** if operator version matches; must meet ICU + connectivity requirements |
-| **Install complexity** | Lower if using `postgresql_admin_*`: installer creates DBs/users. Moderate if DBAs pre-create objects | Higher upfront: operator install, cluster CRs, secrets, storage class, networking, then AAP inventory `*_pg_*` |
-| **AAP install complexity** | Documented inventory vars (`gateway_pg_host`, `controller_pg_host`, etc.) | Same inventory pattern; plus cross-team coordination (OCP ↔ RHEL VMs) |
-| **Day-2 operations** | DBA / Linux team: patch PG, disk, backups. AAP **containerized backup/restore** playbooks apply when PG **15** and using RH-documented external setup | Customer owns Crunchy backup (pgBackRest, snapshots), failover, upgrades. **PG 16/17: external backup/restore required** per RH docs |
-| **Support boundary** | Red Hat: AAP + RHEL (as entitled). Database: customer unless RHEL for PostgreSQL is in scope | Red Hat: AAP when DB meets requirements. Crunchy/operator/DB cluster: **customer** (unless separate Crunchy/RH consulting) |
-| **Infrastructure cost** | +1 (or HA pair) of DB VMs, storage, RHEL + optional RH PostgreSQL subs; predictable VM economics | OCP worker/storage overhead for DB operator; possibly dedicated cluster; license/support for Crunchy if commercial |
-| **HA** | Customer implements (Patroni, RH HA patterns, cloud RDS, etc.) — **not** defined in enterprise topology diagram | Crunchy PGO HA is a strength — if team already standardizes on it |
-| **Performance tuning** | [Tune PostgreSQL for AAP](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/optimize-tuning-postgresql) + DBA practice | Customer + Crunchy features; validate latency from AAP VMs to OCP DB service |
-| **Security / compliance** | Familiar VM hardening, firewall pin **5432** from each AAP component group | Add OCP RBAC, network policies, secrets rotation; audit Crunchy backup encryption |
-| **Uninstall / lifecycle** | Customer responsible for dropping DBs/data per RH external DB notes | Customer deletes Crunchy clusters + PVCs; coordinate with AAP uninstall |
+Three customer-operated paths are compared below. **EDB** is not carried as a column — see [resources.md → EDB](resources.md#red-hat-enterprisedb-testing-with-aap-not-referenced-before-2026-05-19) if the customer raises it.
+
+| Dimension | RH-aligned external PG on RHEL 10 VM | Managed DBaaS (RDS / Azure DB for PostgreSQL) | Crunchy PGO (customer-operated) |
+|-----------|--------------------------------------|------------------------------------------------|---------------------------------|
+| **What it is** | PostgreSQL on RHEL 10 VM(s) per RH external-DB install guide | Cloud-managed PostgreSQL consumed via endpoint | PostgreSQL clusters managed by Crunchy Data Operator on Kubernetes |
+| **PostgreSQL versions (2.6)** | **15** aligns with “AAP managed database” line; external allowed **15–17** with ICU | **15–17** depending on SKU; verify ICU + required extensions per AAP docs | **15–17** if operator version matches; verify ICU + required extensions |
+| **Install complexity** | Lower with `postgresql_admin_*`; moderate if DBAs pre-create objects | Higher: **no true superuser** → DBs/users **pre-created manually**; secrets + endpoint mgmt | Higher upfront: operator install, cluster CRs, secrets, storage class, networking |
+| **AAP install pattern** | Inventory `*_pg_host` vars; omit `[database]` group | Same inventory vars; pre-create runbook required | Same inventory vars; plus cross-team coord (K8s ↔ RHEL VMs) |
+| **Day-2 ops** | DBA / Linux team: patch PG, disk, backups, HA | **Cloud team** owns patching, HA, backups — least operational labor of the three | Customer Crunchy ops: pgBackRest, failover, upgrades |
+| **HA** | **Customer must design** — Patroni / RH HA Add-on / streaming repl. See [Appendix A](#appendix-a-ha-pattern-decision-must-commit-before-install) | **Cloud-native multi-AZ failover** — strongest of the three on this dimension | Crunchy PGO HA is a strength if team standardizes on it |
+| **Backup / restore** | PG 15: AAP containerized backup utilities. PG 16/17: **customer-owned** | Cloud-managed snapshots; **may not integrate** with AAP backup playbooks — accept cloud-native backup as source of truth | Customer pgBackRest / snapshots; PG 16/17 customer-owned |
+| **Support boundary** | Red Hat: AAP + RHEL. DB: customer (unless RH PG sub in scope) | Red Hat: AAP. DB: **cloud provider** — often the cleanest RACI | Red Hat: AAP when DB meets reqs. DB cluster: **customer** (or Crunchy commercial) |
+| **Infrastructure cost** | +1–2 DB VMs + storage; predictable VM economics | Cloud DB monthly cost (per-vCPU / storage / I/O); HA and ops labor included | OCP worker + PV cost; possible Crunchy commercial subscription |
+| **Performance tuning** | [RH tuning guide](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/optimize-tuning-postgresql) + DBA practice | Limited tuning surface; parameter groups / SKU upgrades | Customer + Crunchy features; validate latency from AAP VMs |
+| **Security / compliance** | VM hardening, 5432 firewall pin, TLS to DB | Cloud IAM, security groups / NSGs, private endpoints, TLS by default | OCP RBAC, network policies, secrets rotation, audit Crunchy backup encryption |
+| **Network path** | AAP VMs → DB VM on 5432 (same DC) | AAP VMs → cloud endpoint (**VPN / Direct Connect / ExpressRoute latency matters**) | AAP VMs → K8s service / external LB on 5432 |
+| **`postgresql_admin_*` flow** | **Available** if DBA team accepts | **Not available** — managed PG denies true superuser | Possible if operator configured; usually pre-create |
+| **Uninstall / lifecycle** | Customer drops DBs/data per RH external DB notes | Customer destroys DB instance via cloud console / IaC | Customer deletes Crunchy clusters + PVCs; coordinate with AAP uninstall |
 
 ---
 
@@ -181,17 +193,132 @@ So the conversation is: **how** you run external Postgres, not whether enterpris
 
 ---
 
-## 7. Recommendation framing (with RHEL 10 VMs chosen)
+## 7. Recommendation framing — conditional on discovery answers
 
-| Customer situation | Lean toward |
-|--------------------|-------------|
-| **This customer — AAP 2.6 enterprise on RHEL 10 VMs** | **Red Hat–aligned external PostgreSQL 15** on a **RHEL 10** DB VM (or approved external Postgres service meeting RH requirements) |
-| Existing OpenShift + Crunchy mandate from central platform team | **Crunchy** only if architecture board accepts RHEL 10 → OCP **5432** dependency; document support RACI |
-| Strict RPO/RTO; no K8s DB practice | **RHEL 10 Postgres VM** or cloud RDS — avoid new Crunchy adoption for AAP alone |
-| Future move of AAP to **Operator on OCP** | Revisit Crunchy when platform shifts; not required for current RHEL 10 VM decision |
+**Do not pre-commit to a path.** The recommendation depends on three answers the customer has not yet given (see [questions.md](questions.md) and the open items in [objectives.md](objectives.md)):
+
+1. **RPO/RTO target** — does the database need RPO ≈ 0 / RTO < 5 min, or is overnight-backup RPO acceptable?
+2. **Superuser availability** — will the DBA team hand `postgresql_admin_*` superuser credentials to the installer, or must databases and users be **pre-created** by the DBA team?
+3. **DBaaS on the table?** — Is **AWS RDS** / **Azure Database for PostgreSQL** a viable host (ICU + version + required extensions met), or is the database constrained to **customer-operated** hosts (RHEL VM, Crunchy, EDB)?
+
+### Decision tree
+
+| If… | Then lean toward | Watch out for |
+|-----|------------------|---------------|
+| RPO/RTO tight **and** DBaaS allowed **and** managed PG meets AAP requirements (version, ICU, extensions) | **Managed DBaaS** (RDS / Azure Database) | `postgresql_admin_*` superuser flow is **not** available — DBs/users must be pre-created; verify ICU, hstore, and TLS cert chain |
+| RPO/RTO tight **and** DBaaS not allowed **and** team already operates Patroni / RH HA Add-on / Crunchy PGO | **The HA stack the team already runs** — RH-aligned PG on RHEL with a *named* HA pattern, or Crunchy if it is the standard | HA design must be committed and tested **before** AAP install; Crunchy adds cross-platform 5432 + support RACI |
+| RPO/RTO relaxed (overnight backup acceptable) **and** superuser available | **RH-aligned external PG on RHEL 10 VM**, installer-driven object creation via `postgresql_admin_*` | PG **15** EOL **Nov 2027** — pick PG version with an upgrade plan; DR (cross-site) is still customer-owned |
+| RPO/RTO relaxed **and** superuser blocked by DBA policy | **RH-aligned external PG on RHEL 10 VM**, DBAs **pre-create** databases/users | Install runbook must include pre-create SQL; verify ICU and required extensions before install date |
+| Customer already runs Crunchy at scale with an existing operations team | **Crunchy** — leverages sunk cost; not justified by AAP alone | Confirm latency and connectivity from **all** enterprise AAP hosts; document AAP vs Crunchy support boundary |
+| EnterpriseDB subscription already in place or compliance requires it | **EDB path** — see [resources.md → EDB](resources.md#red-hat-enterprisedb-testing-with-aap-not-referenced-before-2026-05-19) for pros/cons, repo scope, and support boundary | Validate **RHEL 10** + **containerized enterprise on VMs** against repo's tested configurations; support is split (Red Hat AAP + EDB) |
+| Future move of AAP to **Operator on OCP** | Revisit DB path when platform shifts; not a driver for the current RHEL 10 VM decision | Do not pre-buy Crunchy now in anticipation |
+
+### What this section deliberately does NOT recommend
+
+Until the three discovery answers are in, this brief does **not** recommend:
+
+- A specific PostgreSQL major version (15 vs 16 vs 17 depends on the backup-tooling decision in [objectives.md](objectives.md))
+- A specific HA pattern for the RH-aligned path (Patroni vs RH HA Add-on vs DBaaS-native)
+- Whether to use `postgresql_admin_*` superuser or pre-create databases/users
+
+Locking these in before discovery skips the questions that change the answer.
 
 ---
 
 ## 8. One-line elevator pitch
 
 > Container enterprise already uses an **external** database; choosing “Red Hat–aligned Postgres on RHEL” optimizes for **installer documentation and AAP backup integration**, while choosing **Crunchy** optimizes for **Kubernetes-native database operations** at the cost of **cross-platform complexity and a sharper support boundary**.
+
+---
+
+## Appendix A — HA pattern decision (must commit before install)
+
+The "RH-aligned external PG on RHEL VM" recommendation is **not complete** until an HA pattern is named. Without one, "external Postgres on a RHEL VM" is a single point of failure under the most critical AAP component.
+
+| HA pattern | What it is | Best fit when… | Watch out for |
+|-----------|-----------|----------------|----------------|
+| **Single VM, no HA** | One Postgres instance, backups only | Lab / dev / non-prod tier; RPO/RTO ≥ overnight | Not an enterprise prod answer |
+| **Streaming replication + manual failover** | Primary + ≥ 1 standby, async (or sync); manual promotion | Customer has Linux team but no Patroni experience; RTO measured in tens of minutes | Promotion runbook + tested; client reconnect behavior on the AAP side |
+| **Patroni + etcd / Consul** | Automated leader election + failover | Team has K8s / etcd experience or willing to operate it; RTO < 5 min target | etcd cluster availability becomes its own dependency |
+| **RH HA Add-on (Pacemaker + Corosync)** | RHEL-native cluster manager with PG resource agent | Customer already standardizes on Pacemaker for other RHEL HA | Less Postgres-specific tooling than Patroni; fencing must be configured |
+| **DBaaS-native (multi-AZ)** | Cloud-managed automatic failover | DBaaS path is selected (see [§3](#3-side-by-side-summary-table)) | Out of scope for "RH-aligned on RHEL VM" — this is a separate path |
+
+**To populate during discovery:**
+
+- [ ] HA pattern selected: ______________
+- [ ] Replication topology (sync / async, N standbys): ______________
+- [ ] Failover trigger (automated / manual) and **measured** RTO: ______________
+- [ ] Cluster-manager owner (etcd / Pacemaker / cloud): ______________
+- [ ] DR (cross-site) plan — **separate from HA**: ______________
+- [ ] Backup target during failover (primary only? replica-tolerant?): ______________
+
+**Network ports beyond 5432** (add to the AAP firewall plan, since the topology doc covers only 5432):
+
+- Patroni REST API (typically 8008) between PG nodes
+- etcd / Consul ports (etcd: 2379/2380; Consul: 8300–8302, 8500)
+- Pacemaker / Corosync (UDP 5404/5405; pcsd 2224)
+- Replication traffic on 5432 between PG nodes
+
+---
+
+## Appendix B — Preflight checklist (verify before install date)
+
+Stubs — fill in owner and verified date during discovery / preparation. Items here block AAP install if missed.
+
+### Database stack
+- [ ] PostgreSQL version selected (**15 / 16 / 17**, gated on backup-tooling decision): ______________
+- [ ] ICU enabled and version verified compatible with chosen PG major: ______________
+- [ ] Required extensions enabled (confirm full list against AAP 2.6 docs; **hstore** known): ______________
+- [ ] Backup target identified and **restore tested** (where dumps land, retention, encryption): ______________
+- [ ] HA pattern committed and replication tested (see [Appendix A](#appendix-a-ha-pattern-decision-must-commit-before-install)): ______________
+
+### Access and credentials
+- [ ] `postgresql_admin_*` superuser available **OR** pre-create SQL runbook ready (gateway, controller, hub, EDA): ______________
+- [ ] Per-component PG users created with their own database + password: ______________
+- [ ] Secrets storage for PG creds (Vault / inventory encrypted with `ansible-vault`): ______________
+
+### Network
+- [ ] TCP **5432** from each AAP component class to DB endpoint — firewall rule confirmed end-to-end: ______________
+- [ ] Replication / cluster-manager ports open between PG nodes (see [Appendix A](#appendix-a-ha-pattern-decision-must-commit-before-install)): ______________
+- [ ] DB hostname resolvable from **every** AAP VM (gateway, controller, hub, EDA, mesh): ______________
+- [ ] Latency budget **measured** (AAP VMs → DB endpoint, p99 round-trip): ______________
+
+### TLS
+- [ ] DB server certificate issued by CA trusted by AAP container trust store: ______________
+- [ ] `sslmode` enforced (target: `verify-full`): ______________
+- [ ] Certificate rotation plan documented (who, when, how): ______________
+
+### Day-2
+- [ ] Restore drill scheduled with owner named: ______________
+- [ ] PG major-version upgrade plan documented (especially if PG **15** chosen — EOL Nov 2027): ______________
+- [ ] Monitoring / alerting endpoint (connections, replication lag, disk, slow queries): ______________
+
+---
+
+## Appendix C — DB sizing placeholders (collect during discovery)
+
+AAP per-VM minimums (16 GB RAM, 4 vCPU, 60 GB disk, 3000 IOPS) **do not apply** to the database tier. The DB must be sized independently from automation volume and connection counts.
+
+**Inputs to collect:**
+
+| Input | Value | Source |
+|-------|-------|--------|
+| Jobs / day (peak) | ______ | Customer automation ops |
+| EDA events / sec (sustained, peak) | ______ | EDA source teams |
+| Hub: collections published / week | ______ | Content team |
+| Hub: artifact storage volume | ______ | (separate from DB — object/file store) |
+| Concurrent active connections (peak) | ______ | Estimate from controller + gateway + hub + EDA worker counts |
+| Retention windows (job events, audit) | ______ | Customer compliance |
+
+**Stub sizing (replace with measured numbers once inputs collected):**
+
+| Resource | Stub | Notes |
+|----------|------|-------|
+| vCPU | TBD (≥ 8 typical for enterprise) | Scale with concurrent connections + EDA event rate |
+| RAM | TBD (≥ 32 GB typical) | Target ≥ working set of all four logical DBs |
+| Storage | TBD | Four logical DBs (gateway, controller, hub, EDA) — controller usually dominates with job events |
+| IOPS | TBD (3000 is the per-VM **minimum**, not a DB target) | Provision higher for DB tier; measure under expected EDA + job load |
+| Connections / pooling | TBD | **Decide pooling strategy** (PgBouncer placement? per-component?) before sizing connections — AAP 2.6 does not ship an opinionated pooler for external DB |
+| Network bandwidth (DB ↔ AAP) | TBD | EDA event ingestion can saturate small links |
+
+**Per-environment scaling:** Test, staging, and prod will each have a DB tier. Decide whether non-prod gets HA, what scale, and whether DBaaS is permitted in all environments before committing.

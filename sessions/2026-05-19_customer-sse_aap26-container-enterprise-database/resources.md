@@ -78,6 +78,11 @@ Public Red Hat testing/validation repo (not a substitute for official AAP instal
 
 **Support boundary (important for SSE):** The GitHub org describes **testing and validation**. **EnterpriseDB** commercial support is with EDB; **AAP** with Red Hat; this repo is engineering reference, not a single support contract.
 
-## Related session
+### Deep dive — when EDB is on the table
 
-Dynatrace → AAP integration (separate topic): [2026-05-19_internal_dynatrace-aap26-workflow-connectivity](../2026-05-19_internal_dynatrace-aap26-workflow-connectivity/).
+(Moved from talking-points.md so the main side-by-side stays focused on the three customer-operated paths in scope.)
+
+- **Pros:** Multi-DC HA/DR patterns, EFM failover hooks, AAP scale scripts during failover, documented RTO/RPO targets, DR test framework. Strongest HA/DR story of any path in this brief.
+- **Cons:** **EnterpriseDB subscription** required (extra cost vs RHEL PostgreSQL); repo targets **RHEL 9.4+** / **OpenShift 4.12+** — validate **RHEL 10** + **containerized enterprise on VMs** against this repo (may differ from repo's Operator/TPA-first layouts); **split support** (EDB + Red Hat AAP).
+- **Cost:** Typically **higher** than RH-aligned community PostgreSQL on RHEL because of **EDB licensing** plus HA/DR scope (S3 WAL archive, multi-DC).
+- **Do not** treat EDB_Testing as replacing the [container enterprise topology](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/plan-ref_cont_b_env_a) or the [external PostgreSQL install guide](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/install-con_configuring-an-external-postgresql-database) until architecture is mapped explicitly to the customer's RHEL 10 + containerized enterprise topology.
