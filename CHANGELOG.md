@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Session [2026-05-19_internal_dynatrace-aap26-workflow-connectivity](sessions/2026-05-19_internal_dynatrace-aap26-workflow-connectivity/) — Dynatrace Workflows to AAP 2.6 EDA event stream: Option 1 static Event data (validated), Option 2 JavaScript `fetch` deferred, UI pitfalls documented
 - Same session: EdgeConnect (SaaS → on-prem OpenShift), DNS/connect `os error 16` troubleshooting
 - Same session: [cribnotes.md](sessions/2026-05-19_internal_dynatrace-aap26-workflow-connectivity/cribnotes.md) from personal Dynatrace crib sheet (redacted)
+- Session [2026-05-19_customer-sse_aap26-container-enterprise-database](sessions/2026-05-19_customer-sse_aap26-container-enterprise-database/) — compare RH-aligned external PostgreSQL vs Crunchy for container enterprise topology (customer: RHEL 10 VMs); add [EDB_Testing](https://github.com/Red-Hat-EnterpriseDB-Testing/EDB_Testing) EnterpriseDB path
 
 ### Changed
 - CI validates session folder naming, requires each session folder in the README Session Index, and checks that index links point at existing directories
