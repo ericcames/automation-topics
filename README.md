@@ -40,7 +40,7 @@ Each session folder contains:
 |------|----------|-------|--------|
 | 2026-05-14 | `customer-sse` | AAP 2.6 and CI/CD pipelines | [sessions/2026-05-14_customer-sse_aap26-cicd-pipelines](sessions/2026-05-14_customer-sse_aap26-cicd-pipelines/) |
 | 2026-05-19 | `internal` | Dynatrace → AAP 2.6 EDA event stream (Option 1 static JSON) | [sessions/2026-05-19_internal_dynatrace-aap26-workflow-connectivity](sessions/2026-05-19_internal_dynatrace-aap26-workflow-connectivity/) |
-| 2026-05-19 | `customer-sse` | AAP 2.6 container enterprise — PostgreSQL vs Crunchy external DB | [sessions/2026-05-19_customer-sse_aap26-container-enterprise-database](sessions/2026-05-19_customer-sse_aap26-container-enterprise-database/) |
+| 2026-05-19 | `customer-sse` | AAP 2.6 container enterprise — PostgreSQL vs DBaaS vs Crunchy external DB | [sessions/2026-05-19_customer-sse_aap26-container-enterprise-database](sessions/2026-05-19_customer-sse_aap26-container-enterprise-database/) |
 
 ## Contributing
 

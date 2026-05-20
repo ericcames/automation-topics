@@ -4,9 +4,9 @@
 |-------|-------|
 | Date | 2026-05-19 |
 | Audience type | `customer-sse` |
-| Topic | Compare Red Hat–aligned external PostgreSQL vs customer-operated external DB (e.g. Crunchy) for containerized enterprise topology |
+| Topic | Compare Red Hat–aligned external PostgreSQL, managed DBaaS (RDS / Azure Database), and customer-operated external DB (Crunchy) for containerized enterprise topology |
 | Format | Architecture / planning brief for SSE and architects |
-| Contributors | Auto (Cursor) |
+| Contributors | Auto (Cursor); Claude Opus 4.7 |
 
 ## Goal
 

@@ -13,6 +13,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Same session: EdgeConnect (SaaS → on-prem OpenShift), DNS/connect `os error 16` troubleshooting
 - Same session: [cribnotes.md](sessions/2026-05-19_internal_dynatrace-aap26-workflow-connectivity/cribnotes.md) from personal Dynatrace crib sheet (redacted)
 - Session [2026-05-19_customer-sse_aap26-container-enterprise-database](sessions/2026-05-19_customer-sse_aap26-container-enterprise-database/) — compare RH-aligned external PostgreSQL vs Crunchy for container enterprise topology (customer: RHEL 10 VMs); add [EDB_Testing](https://github.com/Red-Hat-EnterpriseDB-Testing/EDB_Testing) EnterpriseDB path
+- Same session: restructured to discovery-first — recommendation in `talking-points.md §7` is now a conditional decision tree keyed on RPO/RTO, `postgresql_admin_*` superuser availability, and DBaaS allowability; added a Mermaid flowchart for the same three questions
+- Same session: added **managed DBaaS** (RDS / Azure Database for PostgreSQL) as a third path in the side-by-side; demoted EDB to a deep-dive in `resources.md` so the main comparison stays focused on the three in-scope paths
+- Same session: added Appendices A (HA pattern decision — Patroni+etcd, RH HA Add-on, streaming repl, DBaaS-native), B (preflight checklist — DB stack, access, network, TLS, day-2), and C (sizing inputs + stub resource targets) in `talking-points.md`; each appendix uses a two-column table with opinionated SSE pre-fill defaults alongside blank customer-answer cells
+- Same session: added Concepts section to `resources.md` explaining Patroni + etcd / Consul (PostgreSQL HA orchestration) and PgBouncer (connection pooling modes, the AAP `LISTEN` / `NOTIFY` gotcha)
 
 ### Changed
 - CI validates session folder naming, requires each session folder in the README Session Index, and checks that index links point at existing directories
