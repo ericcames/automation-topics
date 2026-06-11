@@ -111,6 +111,123 @@ token/AppRole-based HashiCorp Vault credential types, which still exist (see
 > announcements describe the flow but not every field. The Vault side follows the
 > standard [JWT/OIDC auth method](https://developer.hashicorp.com/vault/docs/auth/jwt).
 
+## Reference configuration (template)
+
+The "one-time trust" is small enough to show as config-as-code — which is the
+best answer to *"how hard is the setup?"* These are **templates**, not runnable
+artifacts:
+
+- The **Vault side is structurally complete** — it's the standard JWT auth method
+  that exists today; only the `<PLACEHOLDER>` *values* come from AAP's OIDC
+  discovery document.
+- The **AAP side uses the proven `infra.aap_configuration` data-file pattern.** That
+  collection resolves a credential by its `credential_type` **name** against AAP's
+  managed types, so it provisions an OIDC HashiCorp Vault credential the moment
+  **AAP 2.7** exposes that managed type — no collection change or version gate. The
+  only genuine 2.7 unknowns are the **exact credential-type name and input field
+  keys**; confirm those against the GA docs.
+
+### Vault side — Terraform (high confidence, structure is stable)
+
+```hcl
+# Standard JWT/OIDC auth method. Fill each <PLACEHOLDER> from AAP's OIDC
+# discovery document (…/.well-known/openid-configuration) — confirm against
+# the AAP 2.7 docs before applying.
+
+# 1. Enable the JWT auth method (mount once)
+resource "vault_jwt_auth_backend" "aap" {
+  path               = "jwt-aap"
+  type               = "jwt"
+  oidc_discovery_url = "https://<AAP_HOST>/<OIDC_DISCOVERY_PATH>"  # AAP's discovery base
+  bound_issuer       = "https://<AAP_HOST>/<OIDC_ISSUER_PATH>"     # pins the iss claim (optional)
+}
+
+# 2. Policy — scope exactly which secret paths a matching job may read
+resource "vault_policy" "aap_job" {
+  name   = "aap-job-read"
+  policy = <<-EOT
+    path "secret/data/automation/*" {
+      capabilities = ["read"]
+    }
+  EOT
+}
+
+# 3. Role — map AAP's JWT claims to the policy above
+resource "vault_jwt_auth_backend_role" "aap_job" {
+  backend         = vault_jwt_auth_backend.aap.path
+  role_name       = "aap-job"
+  role_type       = "jwt"
+  token_policies  = [vault_policy.aap_job.name]
+
+  user_claim      = "<USER_CLAIM>"      # claim Vault uses as identity (e.g. sub)
+  bound_audiences = ["<AAP_AUDIENCE>"]  # the aud value AAP stamps into the JWT
+  bound_claims    = {                   # restrict WHICH AAP identities may assume this role
+    "<CLAIM_NAME>" = "<EXPECTED_VALUE>"
+  }
+
+  token_ttl       = 300                 # short-lived Vault token
+  token_max_ttl   = 600
+}
+```
+
+<details>
+<summary>CLI equivalent (same three steps)</summary>
+
+```bash
+# 1. Enable + configure the JWT auth method
+vault auth enable -path=jwt-aap jwt
+vault write auth/jwt-aap/config \
+  oidc_discovery_url="https://<AAP_HOST>/<OIDC_DISCOVERY_PATH>" \
+  bound_issuer="https://<AAP_HOST>/<OIDC_ISSUER_PATH>"
+
+# 2. Policy
+vault policy write aap-job-read - <<'EOT'
+path "secret/data/automation/*" { capabilities = ["read"] }
+EOT
+
+# 3. Role
+vault write auth/jwt-aap/role/aap-job \
+  role_type="jwt" \
+  user_claim="<USER_CLAIM>" \
+  bound_audiences="<AAP_AUDIENCE>" \
+  bound_claims='{"<CLAIM_NAME>":"<EXPECTED_VALUE>"}' \
+  token_policies="aap-job-read" \
+  token_ttl=300 token_max_ttl=600
+```
+</details>
+
+### AAP side — `infra.aap_configuration` data file
+
+> ⚠️ **Confirm two strings before use.** The plumbing below is the proven pattern;
+> only the `credential_type` **name** and the `inputs` **field keys** are 2.7-new —
+> verify them against the GA docs.
+
+```yaml
+# files/controller_credentials.yml — consumed by the
+# infra.aap_configuration.controller_credentials role (the same role used for
+# every other credential). Secrets normally come from env-var lookups, never
+# inline. But OIDC is the easy case: there is NO stored Vault token / secret_id
+# to inject — AAP mints the JWT itself at run time, so `inputs` carries no secret.
+controller_credentials:
+  - name: "{{ cred_vault_oidc }}"
+    organization: "{{ my_organization }}"
+    credential_type: "HashiCorp Vault Secret Lookup (OIDC)"  # confirm exact 2.7 managed-type name
+    inputs:
+      url: "{{ vault_addr }}"   # e.g. https://<VAULT_ADDR>:8200
+      role: "aap-job"           # must match the Vault role in the Terraform above
+      # confirm remaining OIDC field keys (namespace, kv api_version, mount path, …) in 2.7 docs
+```
+
+Then attach the credential to each job template that needs Vault — in the
+`infra.aap_configuration.controller_job_templates` data file, add the credential's
+name to that template's `credentials:` list (exactly how dc1.azure wires Machine,
+cloud, and custom credentials onto its templates today).
+
+The two `<USER_CLAIM>` / `<AAP_AUDIENCE>` / `bound_claims` values on the Vault side
+and the `role` on the AAP side are the *only* coupling between the two systems —
+everything else is independent. That is the whole "one-time trust": set it once,
+and every future job authenticates with a freshly minted, self-expiring token.
+
 ## Why it matters — the talking points
 
 1. **No stored Vault credential in AAP.** The bootstrap secret is gone. Fewer
