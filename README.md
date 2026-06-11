@@ -43,14 +43,6 @@ Each session folder contains:
 | 2026-05-19 | `customer-sse` | AAP 2.6 container enterprise — PostgreSQL vs DBaaS vs Crunchy external DB | [sessions/2026-05-19_customer-sse_aap26-container-enterprise-database](sessions/2026-05-19_customer-sse_aap26-container-enterprise-database/) |
 | 2026-05-28 | `customer-sse` | Dynatrace SaaS → AAP EDA pull model (EDA polls Dynatrace; no EdgeConnect); build 2.6 test → promote 2.5 prod | [sessions/2026-05-28_customer-sse_dynatrace-aap-eda-pull-integration](sessions/2026-05-28_customer-sse_dynatrace-aap-eda-pull-integration/) |
 
-## Reference Docs
-
-Evergreen concept explainers (not dated, audience-neutral) live in [`docs/`](docs/):
-
-| Topic | Doc |
-|-------|-----|
-| AAP as an OIDC Identity Provider for HashiCorp Vault (JWT workload identity; AAP 2.7) | [docs/aap-oidc-vault-identity.md](docs/aap-oidc-vault-identity.md) |
-
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). The blank session template lives in [_template/](_template/).
