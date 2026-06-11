@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- Reference doc [docs/aap-oidc-vault-identity.md](docs/aap-oidc-vault-identity.md) — explains what "AAP acts as an OIDC Identity Provider for HashiCorp Vault" means: JWT workload identity in **AAP 2.7** that removes the stored Vault credential, the end-to-end mint→verify→scope flow, the two OIDC credential types (Secret Lookup, Signed SSH), the Vault JWT auth-method trust setup, security benefits, and objections; plus a new **Reference Docs** section in the root README pointing at `docs/`
 - [AGENTS.md](AGENTS.md) for AI contributor orientation
 - Cursor project rule [`.cursor/rules/read-agents.mdc`](.cursor/rules/read-agents.mdc) (`alwaysApply`) so agents load that guidance automatically
 - Session [2026-05-19_internal_dynatrace-aap26-workflow-connectivity](sessions/2026-05-19_internal_dynatrace-aap26-workflow-connectivity/) — Dynatrace Workflows to AAP 2.6 EDA event stream: Option 1 static Event data (validated), Option 2 JavaScript `fetch` deferred, UI pitfalls documented
