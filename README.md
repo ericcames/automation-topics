@@ -42,6 +42,7 @@ Each session folder contains:
 | 2026-05-19 | `internal` | Dynatrace → AAP 2.6 EDA event stream (Option 1 static JSON) | [sessions/2026-05-19_internal_dynatrace-aap26-workflow-connectivity](sessions/2026-05-19_internal_dynatrace-aap26-workflow-connectivity/) |
 | 2026-05-19 | `customer-sse` | AAP 2.6 container enterprise — PostgreSQL vs DBaaS vs Crunchy external DB | [sessions/2026-05-19_customer-sse_aap26-container-enterprise-database](sessions/2026-05-19_customer-sse_aap26-container-enterprise-database/) |
 | 2026-05-28 | `customer-sse` | Dynatrace SaaS → AAP EDA pull model (EDA polls Dynatrace; no EdgeConnect); build 2.6 test → promote 2.5 prod | [sessions/2026-05-28_customer-sse_dynatrace-aap-eda-pull-integration](sessions/2026-05-28_customer-sse_dynatrace-aap-eda-pull-integration/) |
+| 2026-06-16 | `customer-sse` | RHEL patching modernization — test → promote (Satellite Content Views/lifecycle), rollback (CV revert / snapshot / Leapp snapshot-before), staggered rings, ServiceNow change-gate, Insights push-button; SUSE/Power/Qualys noted | [sessions/2026-06-16_customer-sse_rhel-patching-test-promote-rollback](sessions/2026-06-16_customer-sse_rhel-patching-test-promote-rollback/) |
 
 ## Contributing
 
