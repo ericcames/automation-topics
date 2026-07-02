@@ -1,0 +1,74 @@
+# =============================================================================
+# AAP 2.7 containerized installer — "hands-off" inventory (excerpt)
+#
+# Goal: bring the platform up already authenticated to the registry, already
+# licensed, and with the EULA accepted — so there are NO manual post-install
+# steps in the UI (no podman login, no subscription picker, no EULA click).
+#
+# Only three variables are needed for that (see the [all:vars] block below):
+#   registry_username, registry_password, controller_license_file
+#   (registry_auth is left at its default of true).
+#
+# SECRETS ARE NOT STORED HERE IN PLAINTEXT.
+# Lines shown as "<vaulted>" are commented out on purpose: their real values
+# live in an ansible-vault encrypted file (vault.yml) that is loaded at install
+# time with `-e @vault.yml`. See scripts/aap-hands-off-install.md for the full
+# write-up, including how to create and encrypt that vault file.
+#
+# This is an excerpt focused on the hands-off variables. Copy the component
+# group layout from the inventory template shipped with your installer bundle
+# and add the [all:vars] entries below. Never commit real secrets or any
+# customer-specific hostnames/IDs — replace the example FQDNs before use.
+# =============================================================================
+
+# ---- Component groups (single-node all-in-one example) ----------------------
+[automationgateway]
+aap.example.com
+
+[automationcontroller]
+aap.example.com
+
+[automationhub]
+aap.example.com
+
+[automationeda]
+aap.example.com
+
+[database]
+aap.example.com
+
+# ---- Global variables -------------------------------------------------------
+[all:vars]
+
+# --- Registry / service account (replaces the manual `podman login`) ---------
+# registry_username and registry_password take a Red Hat *Registry Service
+# Account* (username + token) created at:
+#   https://access.redhat.com/terms-based-registry
+# registry_auth defaults to true, so the two credentials below are required for
+# an online install. They are supplied from the vault file, NOT from this file:
+registry_url=registry.redhat.io
+registry_auth=true
+registry_tls_verify=true
+# registry_username=<vaulted>      # -> set in vault.yml, loaded via -e @vault.yml
+# registry_password=<vaulted>      # -> set in vault.yml, loaded via -e @vault.yml
+
+# --- Subscription + EULA (replaces the UI subscription picker AND the EULA) ---
+# One variable does both: supplying the manifest through the installer applies
+# the subscription and accepts the license non-interactively. There is no
+# separate eula_accept variable. Generate manifest.zip from a subscription
+# allocation at https://access.redhat.com/management/subscription_allocations
+# and place it on the installer host (local, absolute path, readable by the
+# install user). NOTE the American spelling: controller_license_file.
+controller_license_file=/opt/aap/manifest.zip
+
+# --- Other required secrets — vault these too (do not hardcode) ---------------
+# The installer also wants admin and PostgreSQL passwords. Keep them in the
+# same vault.yml. Shown here as vaulted placeholders for completeness:
+# gateway_admin_password=<vaulted>
+# controller_admin_password=<vaulted>
+# hub_admin_password=<vaulted>
+# eda_admin_password=<vaulted>
+# controller_pg_password=<vaulted>
+# hub_pg_password=<vaulted>
+# eda_pg_password=<vaulted>
+# gateway_pg_password=<vaulted>
